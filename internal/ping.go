@@ -3,10 +3,13 @@ package internal
 import (
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
-func spawnPing(target string, port int, useICMP bool, logFile string, verbose bool) {
+func spawnPing(target string, port int, useICMP bool, logFile string, verbose bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	startTime := time.Now()
 	var latency time.Duration
 	var status string

@@ -2,33 +2,46 @@ package internal
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
 func StartScheduler(cfg Config) {
+	// Set interval based on debug mode
+	if cfg.DebugMode {
+		cfg.Interval = 5 * time.Second
+	}
+
 	for {
-		periodStart, periodEnd := calculatePeriod(cfg.DebugMode)
-		logFile := prepareLogFile(periodStart)
+		periodStart, periodEnd := calculatePeriod(cfg)
+		logFile := prepareLogFile(periodStart, cfg)
 
 		fmt.Printf("[Scheduler] New period: %v to %v\n", periodStart, periodEnd)
+
+		var wg sync.WaitGroup
 
 		for time.Now().Before(periodEnd) {
 			nextPingTime := alignToSchedule(periodStart, cfg.Interval)
 			spawnTime := maxTime(time.Now(), nextPingTime)
 
 			sleepUntil(spawnTime)
-			go spawnPing(cfg.Target, cfg.Port, cfg.UseICMP, logFile, cfg.Verbose)
+			wg.Add(1)
+			go spawnPing(cfg.Target, cfg.Port, cfg.UseICMP, logFile, cfg.Verbose, &wg)
 		}
 
-		waitForAllPings()
+		// Wait for all pings in this period to complete
+		wg.Wait()
 		generateSummary(logFile)
+
+		// Sleep until next period to avoid busy loop at rollover
+		sleepUntil(periodEnd.Add(100 * time.Millisecond))
 	}
 }
 
-func calculatePeriod(debug bool) (time.Time, time.Time) {
+func calculatePeriod(cfg Config) (time.Time, time.Time) {
 	now := time.Now()
-	if debug {
-		if now.Second() <= 30 {
+	if cfg.DebugMode {
+		if now.Second() < 30 {
 			start := now.Truncate(time.Minute)
 			return start, start.Add(30 * time.Second)
 		}

@@ -12,9 +12,17 @@ import (
 )
 
 // prepareLogFile creates a new log file for the current period.
-func prepareLogFile(periodStart time.Time) string {
-	logDir := defaultLogDir() // fallback if env/config missing
-	filename := fmt.Sprintf("%s/%s-pings.csv", logDir, periodStart.Format("2006-01-02"))
+func prepareLogFile(periodStart time.Time, cfg Config) string {
+	logDir := cfg.LogDir
+	if logDir == "" {
+		logDir = defaultLogDir() // fallback if env/config missing
+	}
+	var filename string
+	if cfg.DebugMode {
+		filename = fmt.Sprintf("%s/%s-pings.csv", logDir, periodStart.Format("15:04:05.000"))
+	} else {
+		filename = fmt.Sprintf("%s/%s-pings.csv", logDir, periodStart.Format("2006-01-02"))
+	}
 
 	// Ensure directory exists
 	err := os.MkdirAll(logDir, 0755)
