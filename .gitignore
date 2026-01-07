@@ -1,0 +1,32 @@
+# Binaries
+/bin/
+/*.exe
+/*.dll
+/*.so
+/*.dylib
+
+# Build artifacts
+*.out
+
+# Logs
+*.log
+logs/
+ping-logs/
+
+# Config files
+config.yaml
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+vendor/
+
+# Go-specific
+*.test
