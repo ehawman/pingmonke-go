@@ -6,12 +6,14 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Color codes for terminal output
 const (
-	ColorRed     = "\033[31m"
 	ColorGreen   = "\033[32m"
+	ColorRed     = "\033[31m"
 	ColorYellow  = "\033[33m"
 	ColorMagenta = "\033[35m"
 	ColorReset   = "\033[0m"
@@ -41,12 +43,12 @@ func (p *PingLine) GetColoredLine(widths []int) string {
 		color = ColorMagenta
 	}
 
-	// Format with padding
-	line := fmt.Sprintf("%s%-*s %-*s %-*d %s%s",
+	// Format with padding, adding "ms" suffix to latency
+	line := fmt.Sprintf("%s%-*s %-*s %-*s %-12s%s",
 		color,
 		widths[0], p.StartTime,
 		widths[1], p.EndTime,
-		widths[2], p.Latency,
+		widths[2], fmt.Sprintf("%dms", p.Latency),
 		p.Status,
 		ColorReset)
 	return line
@@ -121,20 +123,46 @@ func GetSummaryStats(filePath string) (total, ok, delayed, timeout int, avgLaten
 	return
 }
 
-// FormatHeader returns a formatted header line for the ping table
-func FormatHeader() string {
-	return fmt.Sprintf("%s%-27s %-27s %-6s %s%s",
-		ColorBold,
+// FormatHeader returns a formatted header line for the ping table with health color
+func FormatHeader(healthColor string) string {
+	// Map health colors to background colors
+	var bgColor string
+	switch healthColor {
+	case ColorRed:
+		bgColor = "160" // Dark red
+	case ColorYellow:
+		bgColor = "136" // Dark yellow/orange
+	default:
+		bgColor = "22" // Dark green
+	}
+
+	// Create style with health color background (no padding to preserve alignment)
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("white")).
+		Background(lipgloss.Color(bgColor))
+
+	cols := []string{
 		"Ping Init",
 		"Ping Rec",
 		"Time",
 		"Status",
-		ColorReset)
+	}
+
+	// Format header: use the styled columns but without padding
+	// Match the exact widths used in GetColoredLine
+	header := fmt.Sprintf("%-27s %-27s %-8s %-12s",
+		cols[0],
+		cols[1],
+		cols[2],
+		cols[3])
+
+	return headerStyle.Render(header)
 }
 
 // GetColumnWidths calculates appropriate column widths for display
 func GetColumnWidths(lines []PingLine) [3]int {
-	widths := [3]int{27, 27, 6}
+	widths := [3]int{27, 27, 8}
 	for _, line := range lines {
 		if len(line.StartTime) > widths[0] {
 			widths[0] = len(line.StartTime)
@@ -142,7 +170,8 @@ func GetColumnWidths(lines []PingLine) [3]int {
 		if len(line.EndTime) > widths[1] {
 			widths[1] = len(line.EndTime)
 		}
-		latencyLen := len(fmt.Sprintf("%d", line.Latency))
+		// Account for "ms" suffix in latency
+		latencyLen := len(fmt.Sprintf("%dms", line.Latency))
 		if latencyLen > widths[2] {
 			widths[2] = latencyLen
 		}
@@ -164,8 +193,68 @@ func TruncateTime(timeStr string) string {
 	return t.Format("2006-01-02 15:04:05.000")
 }
 
-// FormatSummaryLine returns a formatted summary statistics line
+// FormatSummaryLine returns a formatted summary statistics line with color coding
 func FormatSummaryLine(total, ok, delayed, timeout int, avgLatency float64) string {
-	return fmt.Sprintf("Total: %d | OK: %d | Delayed: %d | Timeout: %d | Avg: %.0fms",
-		total, ok, delayed, timeout, avgLatency)
+	// Determine most severe status for Total color
+	var totalColor string
+	switch {
+	case timeout > 0:
+		totalColor = ColorRed
+	case delayed > 0:
+		totalColor = ColorYellow
+	default:
+		totalColor = ColorGreen
+	}
+
+	// Determine avg color
+	var avgColor string
+	switch {
+	case avgLatency >= 100:
+		avgColor = ColorYellow
+	case avgLatency > 0:
+		avgColor = ColorGreen
+	default:
+		avgColor = ColorMagenta
+	}
+
+	return fmt.Sprintf("%sTotal: %d%s | %sOK: %d%s | %sDelayed: %d%s | %sTimeout: %d%s | %sAvg: %.0fms%s",
+		totalColor, total, ColorReset,
+		ColorGreen, ok, ColorReset,
+		ColorYellow, delayed, ColorReset,
+		ColorRed, timeout, ColorReset,
+		avgColor, avgLatency, ColorReset)
+}
+
+// FormatEventLine returns a formatted event status line
+func FormatEventLine(event EventStatus, healthColor string) string {
+	var statusCircle string
+	var statusColor string
+
+	switch healthColor {
+	case ColorRed:
+		statusCircle = "●"
+		statusColor = ColorRed
+	case ColorYellow:
+		statusCircle = "◐"
+		statusColor = ColorYellow
+	default:
+		statusCircle = "○"
+		statusColor = ColorGreen
+	}
+
+	// Determine Last/Current based on whether there's an active event
+	var durationStr string
+	if event.IsActive {
+		// Event is active - show current duration
+		durationStr = fmt.Sprintf("Current Event Duration: %v", event.Duration.Round(time.Second))
+	} else if !event.EndTime.IsZero() {
+		// Event has ended - show the ended duration
+		durationStr = fmt.Sprintf("Last Event Duration: %v", event.Duration.Round(time.Second))
+	} else {
+		durationStr = "Last Event Duration: N/A"
+	}
+
+	return fmt.Sprintf("Event: %s%s%s | %s%s%s",
+		statusColor, statusCircle, ColorReset,
+		statusColor, durationStr, ColorReset)
 }

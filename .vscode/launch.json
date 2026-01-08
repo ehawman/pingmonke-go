@@ -1,0 +1,61 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run pingmonke",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/bin/pingmonke",
+            "preLaunchTask": "Build pingmonke",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug pingmonke",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/pingmonke",
+            "console": "integratedTerminal",
+            "args": [
+                "--config", "${workspaceFolder}/config.yaml",
+                "--debug-rollover"
+            ],
+            "env": {
+                "PINGMONKE_LOG_DIR": "${workspaceFolder}/logs"
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Run tailmonke",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/bin/tailmonke",
+            "preLaunchTask": "Build tailmonke",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Run pingmonke + run tailmonke",
+            "configurations": [
+                "Run pingmonke",
+                "Run tailmonke"
+            ],
+            "stopOnEntry": false,
+            "preLaunchTask": "Build All"
+        },
+        {
+            "name": "Debug pingmonke + run tailmonke",
+            "configurations": [
+                "Debug pingmonke",
+                "Run tailmonke"
+            ],
+            "stopOnEntry": false,
+            "preLaunchTask": "Build All"
+        }
+    ]
+}

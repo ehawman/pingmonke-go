@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,10 +26,18 @@ type Event struct {
 }
 
 func generateSummary(logFile string, cfg Config) {
+	generateSummaryWithLogging(logFile, cfg, false)
+}
+
+func generateSummaryWithLogging(logFile string, cfg Config, returnMessage bool) string {
+	var messages []string
 	f, err := os.Open(logFile)
 	if err != nil {
+		if returnMessage {
+			return fmt.Sprintf("[Summary] Error opening log file: %v", err)
+		}
 		fmt.Println("[Summary] Error opening log file:", err)
-		return
+		return ""
 	}
 	defer f.Close()
 
@@ -68,8 +77,11 @@ func generateSummary(logFile string, cfg Config) {
 	summaryFile := logFile[:len(logFile)-4] + "-summary.csv"
 	sf, err := os.Create(summaryFile)
 	if err != nil {
+		if returnMessage {
+			return fmt.Sprintf("[Summary] Error creating summary file: %v", err)
+		}
 		fmt.Println("[Summary] Error creating summary file:", err)
-		return
+		return ""
 	}
 	defer sf.Close()
 
@@ -135,28 +147,17 @@ func generateSummary(logFile string, cfg Config) {
 	}
 
 	writer.Flush()
-	fmt.Printf("[Summary] Summary written to %s\n", summaryFile)
-
-	// Also create a test summary file
-	testSummaryFile := logFile[:len(logFile)-4] + "-test-summary.csv"
-	tsf, err := os.Create(testSummaryFile)
-	if err != nil {
-		fmt.Println("[Summary] Error creating test summary file:", err)
-		return
+	msg := fmt.Sprintf("[Summary] Summary written to %s", summaryFile)
+	if returnMessage {
+		messages = append(messages, msg)
+	} else {
+		fmt.Println(msg)
 	}
-	defer tsf.Close()
 
-	testWriter := csv.NewWriter(tsf)
-	testWriter.Write([]string{"Total", "OK", "Delayed", "Timeout", "Events"})
-	testWriter.Write([]string{
-		fmt.Sprintf("%d", len(pings)),
-		fmt.Sprintf("%d", okCount),
-		fmt.Sprintf("%d", delayedCount),
-		fmt.Sprintf("%d", timeoutCount),
-		fmt.Sprintf("%d", len(events)),
-	})
-	testWriter.Flush()
-	fmt.Printf("[Summary] Test summary written to %s\n", testSummaryFile)
+	if returnMessage {
+		return strings.Join(messages, " | ")
+	}
+	return ""
 }
 
 // formatTimestampForSummary formats a timestamp as YYYY-MM-DD HH:MM:SS.mmm

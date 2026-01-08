@@ -4,12 +4,18 @@ Installation scripts for running pingmonke as a background service on different 
 
 ## Quick Start
 
-All platforms: First build both binaries, then run the installer for your OS.
+All platforms: First build both binaries from the **repo root**, then run the installer for your OS.
 
 ```bash
+# Navigate to the repo root
+cd ~/Programming/pingmonke-go
+
 # Build both tools to user-local directory
 go build -o ~/.local/bin/pingmonke ./cmd/pingmonke
 go build -o ~/.local/bin/tailmonke ./cmd/tailmonke
+
+# Or use the Makefile (easier)
+make install
 
 # Then run your platform's installer (Linux example)
 bash ./installers/linux-systemd.sh
@@ -36,10 +42,11 @@ Install pingmonke as a Windows Service with automatic startup and failure recove
 
 ```powershell
 # Option A: Install to user AppData (recommended)
+mkdir -p "$env:LOCALAPPDATA\Pingmonke"
 go build -o "$env:LOCALAPPDATA\Pingmonke\pingmonke.exe" ./cmd/pingmonke
 go build -o "$env:LOCALAPPDATA\Pingmonke\tailmonke.exe" ./cmd/tailmonke
 
-# Option B: Add to PATH via ~/.local/bin (WSL/Git Bash compatible)
+# Option B: Add to PATH via user .local\bin (Unix-compatible)
 mkdir -p "$env:USERPROFILE\.local\bin"
 go build -o "$env:USERPROFILE\.local\bin\pingmonke.exe" ./cmd/pingmonke
 go build -o "$env:USERPROFILE\.local\bin\tailmonke.exe" ./cmd/tailmonke

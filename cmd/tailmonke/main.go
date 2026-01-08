@@ -57,8 +57,8 @@ func displayNonInteractive(filePath string, linesToDisplay int) {
 		os.Exit(1)
 	}
 
-	// Display header
-	fmt.Println(internal.FormatHeader())
+	// Display header with green (default) health color
+	fmt.Println(internal.FormatHeader(internal.ColorGreen))
 	fmt.Println(strings.Repeat("-", 70))
 
 	// Show last N lines

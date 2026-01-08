@@ -138,7 +138,7 @@ fi
 # Create systemd service file
 echo "Creating systemd service file..."
 
-cat > "$SERVICE_FILE" << 'EOF'
+cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=Pingmonke Network Monitor
 After=network-online.target
@@ -151,13 +151,11 @@ Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=pingmonke
 
 [Install]
 WantedBy=default.target
 EOF
-
-# Expand HOME variable in the file
-sed -i "s|\$HOME|$HOME|g" "$SERVICE_FILE"
 echo -e "  ${GREEN}✓${NC} $SERVICE_FILE"
 
 # Enable and start service

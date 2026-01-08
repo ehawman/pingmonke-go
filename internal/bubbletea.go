@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,19 +12,22 @@ import (
 
 // TailmonkeModel represents the state of the TUI
 type TailmonkeModel struct {
-	filePath       string
-	logDir         string
-	linesToDisplay int
-	lines          []PingLine
-	width          int
-	height         int
-	lastError      string
-	lastRefresh    time.Time
-	summaryLine    string
-	columnWidths   [3]int
-	newFilePath    string    // Detected new file available for switching
-	lastFileCheck  time.Time // Last time we checked for new files
-	explicitFile   bool      // If true, user provided --file flag, disable file detection
+	filePath         string
+	logDir           string
+	linesToDisplay   int
+	lines            []PingLine
+	width            int
+	height           int
+	lastError        string
+	lastRefresh      time.Time
+	summaryLine      string
+	columnWidths     [3]int
+	newFilePath      string      // Detected new file available for switching
+	lastFileCheck    time.Time   // Last time we checked for new files
+	explicitFile     bool        // If true, user provided --file flag, disable file detection
+	lastNotification string      // Last notification message to display
+	notificationTime time.Time   // When the notification was set
+	eventStatus      EventStatus // Current event status
 }
 
 // Message types for bubbletea
@@ -89,6 +93,7 @@ func (m *TailmonkeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lines = msg.lines
 		m.lastRefresh = msg.time
 		m.updateSummary()
+		m.updateHealthState() // Update health state whenever file updates
 		return m, m.tickCmd()
 
 	case TickMsg:
@@ -98,6 +103,9 @@ func (m *TailmonkeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.loadFile()
 		}
 
+		// Update health state on every tick (for duration display updates)
+		m.updateHealthState()
+
 		// Check for new files every 5 seconds (only if file was auto-detected)
 		if !m.explicitFile && time.Since(m.lastFileCheck) >= 5*time.Second {
 			m.lastFileCheck = time.Now()
@@ -106,6 +114,9 @@ func (m *TailmonkeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.newFilePath = newFile
 			}
 		}
+
+		// Force re-render to update event duration display
+		// This ensures the duration string updates every second
 		return m, m.tickCmd()
 	}
 
@@ -120,35 +131,35 @@ func (m *TailmonkeModel) View() string {
 
 	output := ""
 
-	// Calculate available space
-	headerSpace := 2 // Header row + separator
-	notifySpace := 0 // Notification banner (if needed)
-	if m.newFilePath != "" {
-		notifySpace = 2 // Notification + separator
+	// Determine health color based on event status
+	var healthColor string
+	if m.eventStatus.IsActive {
+		healthColor = ColorRed
+	} else if !m.eventStatus.EndTime.IsZero() {
+		// Event has ended and recovered - show green
+		healthColor = ColorGreen
+	} else {
+		healthColor = ColorGreen
 	}
-	summarySpace := 2 // Summary row + separator
-	availableHeight := m.height - headerSpace - notifySpace - summarySpace
 
-	if availableHeight < 5 {
+	// Calculate available space
+	headerSpace := 1  // Header row
+	notifySpace := 1  // Notification line (always present)
+	summarySpace := 1 // Summary stats line
+	eventSpace := 1   // Event status line
+	availableHeight := m.height - headerSpace - notifySpace - summarySpace - eventSpace
+
+	if availableHeight < 3 {
 		return "Terminal too small"
 	}
 
-	// Header
-	output += FormatHeader() + "\n"
-	output += fmt.Sprintf("%s%s%s\n", ColorBold, fmt.Sprintf("%-*s", m.width-1, ""), ColorReset)
+	// 1. Header - with health color background
+	output += FormatHeader(healthColor) + "\n"
 
-	// New file notification
-	if m.newFilePath != "" {
-		newFileName := filepath.Base(m.newFilePath)
-		notifyMsg := fmt.Sprintf("📢 New log file available: %s  Press 'N' to switch", newFileName)
-		output += fmt.Sprintf("%s%s%s\n", ColorYellow, notifyMsg, ColorReset)
-		output += fmt.Sprintf("%s%s%s\n", ColorBold, fmt.Sprintf("%-*s", m.width-1, ""), ColorReset)
-	}
-
-	// Determine how many lines to show
-	linesToShow := m.linesToDisplay
-	if linesToShow > availableHeight-1 {
-		linesToShow = availableHeight - 1
+	// 2. Ping data lines - use all available space
+	linesToShow := availableHeight
+	if linesToShow < 1 {
+		linesToShow = 1
 	}
 
 	// Calculate starting position
@@ -157,10 +168,15 @@ func (m *TailmonkeModel) View() string {
 		startIdx = 0
 	}
 
-	// Display ping lines
+	// Apply dimming if new file available
 	visibleLines := m.lines[startIdx:]
 	for _, line := range visibleLines {
-		output += line.GetColoredLine(m.columnWidths[:]) + "\n"
+		lineStr := line.GetColoredLine(m.columnWidths[:])
+		// Dim the line if new file is available
+		if m.newFilePath != "" {
+			lineStr = fmt.Sprintf("\033[2m%s\033[0m", lineStr) // Dim effect
+		}
+		output += lineStr + "\n"
 	}
 
 	// Pad remaining space
@@ -168,9 +184,29 @@ func (m *TailmonkeModel) View() string {
 		output += "\n"
 	}
 
-	// Summary section
-	output += fmt.Sprintf("%s%s%s\n", ColorBold, fmt.Sprintf("%-*s", m.width-1, ""), ColorReset)
-	output += m.summaryLine
+	// 3. Notification section
+	// Priority: new file notification > summary notification
+	if m.newFilePath != "" {
+		newFileName := filepath.Base(m.newFilePath)
+		notifyMsg := fmt.Sprintf("📢 New log file available: %s  Press 'N' to switch", newFileName)
+		output += fmt.Sprintf("%s%s%s\n", ColorYellow, notifyMsg, ColorReset)
+	} else if m.lastNotification != "" && time.Since(m.notificationTime) < 5*time.Second {
+		// Show summary notifications (from F5 refresh, etc)
+		notifMsg := strings.ReplaceAll(m.lastNotification, "\n", " ")
+		if len(notifMsg) > m.width-1 {
+			notifMsg = notifMsg[:m.width-4] + "..."
+		}
+		output += fmt.Sprintf("%s%s%s\n", ColorYellow, notifMsg, ColorReset)
+	} else {
+		output += "\n" // Empty notification line
+	}
+
+	// 4. Summary statistics line
+	output += m.summaryLine + "\n"
+
+	// 5. Event status line
+	eventLine := FormatEventLine(m.eventStatus, healthColor)
+	output += eventLine
 
 	if m.lastError != "" {
 		output += fmt.Sprintf("\n%sError: %s%s", ColorRed, m.lastError, ColorReset)
@@ -204,10 +240,17 @@ func (m *TailmonkeModel) updateSummary() {
 	m.summaryLine = FormatSummaryLine(total, ok, delayed, timeout, avg)
 }
 
+// updateHealthState updates the health color based on event status
+func (m *TailmonkeModel) updateHealthState() {
+	m.eventStatus = DetectEvent(m.lines)
+}
+
 // regenerateSummary regenerates the summary file for the current log
 func (m *TailmonkeModel) regenerateSummary() {
-	cfg := &Config{DebugMode: false} // Assume normal mode for summary generation
-	generateSummary(m.filePath, *cfg)
+	cfg := &Config{DebugMode: false}                          // Assume normal mode for summary generation
+	msg := generateSummaryWithLogging(m.filePath, *cfg, true) // capture message
+	m.lastNotification = msg
+	m.notificationTime = time.Now()
 }
 
 // findNewerLogFile checks if there's a newer log file than the current one

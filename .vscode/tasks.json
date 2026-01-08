@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build pingmonke",
+            "type": "shell",
+            "command": "go build -o ${workspaceFolder}/bin/pingmonke ${workspaceFolder}/cmd/pingmonke",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build tailmonke",
+            "type": "shell",
+            "command": "go build -o ${workspaceFolder}/bin/tailmonke ${workspaceFolder}/cmd/tailmonke",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build All",
+            "type": "shell",
+            "dependsOn": [
+                "Build pingmonke",
+                "Build tailmonke"
+            ],
+            "command": "echo 'Building both binaries...'",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
