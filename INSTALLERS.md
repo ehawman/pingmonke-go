@@ -24,6 +24,7 @@ bash ./installers/linux-systemd.sh
 Install pingmonke as a Windows Service with automatic startup and failure recovery. Uses user-local AppData directory.
 
 #### Requirements
+
 - Windows 7 or later
 - Administrator privileges (for service creation only)
 - PowerShell 3.0 or later
@@ -44,7 +45,7 @@ go build -o "$env:USERPROFILE\.local\bin\pingmonke.exe" ./cmd/pingmonke
 go build -o "$env:USERPROFILE\.local\bin\tailmonke.exe" ./cmd/tailmonke
 ```
 
-2. Run installer:
+1. Run installer:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installers\windows-service.ps1 -Install
@@ -75,11 +76,13 @@ powershell -ExecutionPolicy Bypass -File windows-service.ps1 -Uninstall
 ```
 
 #### Install Location
+
 - **Binary:** `%LOCALAPPDATA%\Pingmonke\pingmonke.exe`
 - **Config:** `%LOCALAPPDATA%\Pingmonke\config.yaml` (optional)
 - **Example:** `C:\Users\YourName\AppData\Local\Pingmonke\`
 
 #### Features
+
 - User-local installation (no system-wide changes)
 - Automatic startup on boot
 - Automatic restart on failure (5-second delay)
@@ -88,7 +91,9 @@ powershell -ExecutionPolicy Bypass -File windows-service.ps1 -Uninstall
 - Graceful uninstall with proper cleanup
 
 #### Logs
+
 Service logs are available in Windows Event Viewer:
+
 - Open Event Viewer
 - Navigate to Windows Logs > Application
 - Filter by service name "Pingmonke"
@@ -101,12 +106,13 @@ Service logs are available in Windows Event Viewer:
 
 Install pingmonke as a systemd user service for automatic startup and management. Uses XDG Base Directory spec.
 
-#### Requirements
+#### Linux Requirements
+
 - Linux with systemd (most modern distributions)
 - No sudo required (uses user-level systemd)
 - `pingmonke` binary available or built beforehand
 
-#### Installation
+#### Linux Installation
 
 1. Build both binaries to `~/.local/bin`:
 
@@ -115,7 +121,7 @@ go build -o ~/.local/bin/pingmonke ./cmd/pingmonke
 go build -o ~/.local/bin/tailmonke ./cmd/tailmonke
 ```
 
-2. Run installer:
+1. Run installer:
 
 ```bash
 bash ./installers/linux-systemd.sh
@@ -123,7 +129,7 @@ bash ./installers/linux-systemd.sh
 
 The installer will verify both binaries exist and enable the systemd service.
 
-#### Usage
+#### Linux Usage
 
 ```bash
 # View service status
@@ -149,20 +155,24 @@ rm ~/.config/systemd/user/pingmonke.service
 systemctl --user daemon-reload
 ```
 
-#### Install Locations
+#### Linux Install Locations
+
 - **Binary:** `~/.local/bin/pingmonke`
 - **Config:** `~/.config/pingmonke/config.yaml` or `~/ping-logs/config.yaml`
 - **Service:** `~/.config/systemd/user/pingmonke.service`
 
-#### Features
+#### Linux Features
+
 - User-local installation (no sudo required)
 - Automatic startup at user login
 - Proper logging to journalctl
 - Service restart on failure (10-second delay)
 - Standard systemd user service
 
-#### Logs
+#### Linux Logs
+
 View logs with journalctl:
+
 ```bash
 # Last 50 lines
 journalctl --user -u pingmonke -n 50
@@ -182,12 +192,13 @@ journalctl --user -b
 
 Install pingmonke as a launchd user agent for automatic startup and management. Uses user-level LaunchAgent instead of system-wide LaunchDaemon.
 
-#### Requirements
+#### macOS Requirements
+
 - macOS 10.5 or later
 - No sudo required (uses user-level LaunchAgent)
 - `pingmonke` binary available or built beforehand
 
-#### Installation
+#### macOS Installation
 
 1. Build both binaries to `~/.local/bin`:
 
@@ -196,7 +207,7 @@ go build -o ~/.local/bin/pingmonke ./cmd/pingmonke
 go build -o ~/.local/bin/tailmonke ./cmd/tailmonke
 ```
 
-2. Run installer:
+1. Run installer:
 
 ```bash
 bash ./installers/macos-launchd.sh
@@ -204,7 +215,7 @@ bash ./installers/macos-launchd.sh
 
 The installer will verify both binaries exist and enable the launchd service.
 
-#### Usage
+#### macOS Usage
 
 ```bash
 # View service status
@@ -224,21 +235,25 @@ launchctl unload ~/Library/LaunchAgents/com.pingmonke.service.plist
 rm ~/Library/LaunchAgents/com.pingmonke.service.plist
 ```
 
-#### Install Locations
+#### macOS Install Locations
+
 - **Binary:** `~/.local/bin/pingmonke`
 - **Config:** `~/.config/pingmonke/config.yaml` or `~/ping-logs/config.yaml`
 - **Plist:** `~/Library/LaunchAgents/com.pingmonke.service.plist`
 - **Logs:** `~/Library/Logs/pingmonke.log` and `~/Library/Logs/pingmonke-error.log`
 
-#### Features
+#### macOS Features
+
 - User-local installation (no sudo required)
 - Automatic startup at user login (not system boot)
 - Proper logging to ~/Library/Logs
 - Standard launchd user agent
 - Loads at user login time
 
-#### Logs
+#### macOS Logs
+
 View logs with the unified log system:
+
 ```bash
 # Stream pingmonke logs
 log stream --predicate 'process == "pingmonke"'
@@ -265,13 +280,14 @@ See the main README for configuration options.
 
 ## Installation Comparison
 
-| Feature | Windows | Linux | macOS |
-|---------|---------|-------|-------|
-| **Requires Sudo** | No (except service creation) | No | No |
-| **Install Path** | `%LOCALAPPDATA%\Pingmonke` | `~/.local/bin` | `~/.local/bin` |
-| **Service Type** | Windows Service | systemd user service | launchd user agent |
-| **Auto-start** | On boot | At user login | At user login |
-| **Logs** | Event Viewer | journalctl | ~/Library/Logs & log stream |
+| Feature        | Windows                         | Linux                 | macOS                        |
+|----------------|---------------------------------|-----------------------|------------------------------|
+| Requires Sudo  | No (except service creation)    | No                    | No                           |
+| Install Path   | `%LOCALAPPDATA%\Pingmonke`      | `~/.local/bin`        | `~/.local/bin`               |
+| Service Type   | Windows Service                 | systemd user service  | launchd user agent           |
+| Auto-start     | On boot                         | At user login         | At user login                |
+| Logs           | Event Viewer                    | journalctl            | ~/Library/Logs & log stream  |
+
 
 ---
 
@@ -279,18 +295,20 @@ See the main README for configuration options.
 
 ### Service fails to start
 
-1. **Windows:** 
+1. **Windows:**
    - Check Event Viewer: Applications > Pingmonke service
    - Verify binary exists: `%LOCALAPPDATA%\Pingmonke\pingmonke.exe`
    - Run: `powershell -ExecutionPolicy Bypass -File windows-service.ps1 -Status`
 
 2. **Linux:**
+
    ```bash
    systemctl --user status pingmonke
    journalctl --user -u pingmonke -n 20
    ```
 
 3. **macOS:**
+
    ```bash
    launchctl list | grep pingmonke
    log stream --predicate 'process == "pingmonke"'
@@ -299,6 +317,7 @@ See the main README for configuration options.
 ### Service stops unexpectedly
 
 Check the logs for error messages. Common issues:
+
 - Configuration file not found or invalid YAML syntax
 - Network connectivity issues preventing ping
 - Permission problems with log directory (`~/ping-logs`)
@@ -307,12 +326,14 @@ Check the logs for error messages. Common issues:
 ### Reinstall service
 
 **Windows:**
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File windows-service.ps1 -Uninstall
 powershell -ExecutionPolicy Bypass -File windows-service.ps1 -Install
 ```
 
 **Linux:**
+
 ```bash
 systemctl --user disable pingmonke
 systemctl --user stop pingmonke
@@ -322,6 +343,7 @@ bash ./linux-systemd.sh
 ```
 
 **macOS:**
+
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.pingmonke.service.plist
 rm ~/Library/LaunchAgents/com.pingmonke.service.plist
@@ -333,6 +355,7 @@ bash ./macos-launchd.sh
 Ensure the binary is in the correct location for your platform:
 
 **Windows:**
+
 ```powershell
 # Check if file exists
 Test-Path "$env:LOCALAPPDATA\Pingmonke\pingmonke.exe"
@@ -342,6 +365,7 @@ go build -o "$env:LOCALAPPDATA\Pingmonke\pingmonke.exe" ./cmd/pingmonke
 ```
 
 **Linux/macOS:**
+
 ```bash
 # Check if file exists
 ls -la ~/.local/bin/pingmonke

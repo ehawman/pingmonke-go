@@ -45,11 +45,50 @@ prompt_confirm() {
     done
 }
 
+# Check directory permissions
+check_directory_permissions() {
+    local dir=$1
+    local dir_display=$2
+    
+    # Try to create directory if it doesn't exist
+    if [ ! -d "$dir" ]; then
+        if ! mkdir -p "$dir" 2>/dev/null; then
+            echo -e "${RED}✗ Cannot create directory: $dir_display${NC}"
+            echo -e "${YELLOW}Please check permissions or create the directory manually:${NC}"
+            echo -e "  ${BLUE}mkdir -p $dir${NC}"
+            return 1
+        fi
+    fi
+    
+    # Check if directory is writable
+    if [ ! -w "$dir" ]; then
+        echo -e "${RED}✗ No write permission for: $dir_display${NC}"
+        echo -e "${YELLOW}Please fix permissions:${NC}"
+        echo -e "  ${BLUE}chmod u+w $dir${NC}"
+        return 1
+    fi
+    
+    return 0
+}
+
 echo -e "${BOLD}Installation Details:${NC}"
 echo -e "  • Service Name: ${GREEN}$SERVICE_NAME${NC}"
 echo -e "  • Install Path: ${GREEN}$HOME/.local/bin${NC}"
 echo -e "  • Service File: ${GREEN}$SERVICE_FILE${NC}"
 echo -e "  • Service Type: ${GREEN}User-level systemd${NC}"
+echo -e "  • Permissions Required: ${GREEN}None (user-level)${NC}"
+echo ""
+
+echo -e "${BOLD}Checking permissions...${NC}"
+if ! check_directory_permissions "$HOME/.local/bin" "\$HOME/.local/bin"; then
+    exit 1
+fi
+echo -e "  ${GREEN}✓${NC} $HOME/.local/bin is writable"
+
+if ! check_directory_permissions "$HOME/.config/systemd/user" "\$HOME/.config/systemd/user"; then
+    exit 1
+fi
+echo -e "  ${GREEN}✓${NC} $HOME/.config/systemd/user is writable"
 echo ""
 
 # Check if binaries exist

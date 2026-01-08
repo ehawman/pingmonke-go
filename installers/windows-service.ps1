@@ -94,13 +94,38 @@ function Install-Service {
     Write-Host "  • Install Path: $installPath"
     Write-Host "  • Startup Type: Automatic"
     Write-Host "  • Service Type: Windows Service"
+    Write-Host "  • Permissions Required: Administrator (for service creation only)"
     Write-Host ""
 
-    # Create install directory if it doesn't exist
+    Write-Info-Message "Checking permissions..."
+    
+    # Try to create install directory to verify write access
     if (-not (Test-Path $installPath)) {
-        Write-Info-Message "Creating directory: $installPath"
-        New-Item -ItemType Directory -Path $installPath -Force | Out-Null
+        try {
+            New-Item -ItemType Directory -Path $installPath -Force -ErrorAction Stop | Out-Null
+            Write-Success-Message "Created directory: $installPath"
+        }
+        catch {
+            Write-Error-Message "Cannot create directory: $installPath"
+            Write-Info-Message "Ensure %LOCALAPPDATA% is accessible"
+            Write-Info-Message "Current AppData: $installPath"
+            return $false
+        }
+    } else {
+        # Directory exists, check if writable
+        try {
+            $testFile = Join-Path $installPath ".permtest"
+            "test" | Out-File -FilePath $testFile -ErrorAction Stop
+            Remove-Item -Path $testFile -ErrorAction Stop
+            Write-Success-Message "Directory is writable"
+        }
+        catch {
+            Write-Error-Message "No write permission for: $installPath"
+            return $false
+        }
     }
+
+    Write-Host ""
 
     if (-not (Test-Path $exePath)) {
         Write-Error-Message "Executable not found at: $exePath"
