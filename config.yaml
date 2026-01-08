@@ -1,7 +1,7 @@
 # pingmonke configuration
 
 # Target host to ping
-target: google.com
+target: thisdomaindoesntexist.tld # 8.8.8.8
 
 # Directory where ping logs will be saved
 log_dir: ~/ping-logs
