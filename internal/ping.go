@@ -30,7 +30,7 @@ func spawnPing(target string, port int, useICMP bool, logFile string, verbose bo
 	writeToCSV(logFile, startTime, time.Now(), latency, status)
 
 	if verbose {
-		fmt.Println(status)
+		fmt.Printf("[Ping] %s Finished %s:%d - %s (%dms)\n", startTime.Format("15:04:05.000"), target, port, status, latency.Milliseconds())
 	}
 }
 

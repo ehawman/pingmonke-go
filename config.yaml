@@ -1,0 +1,25 @@
+# pingmonke configuration
+
+# Target host to ping
+target: google.com
+
+# Directory where ping logs will be saved
+log_dir: ~/ping-logs
+
+# Ping interval for normal mode (default: 15s)
+# Can use: 5s, 15s, 1m, etc.
+interval: 15s
+
+# Ping interval for debug mode (default: 5s)
+debug_interval: 5s
+
+# Target port for TCP pings
+port: 80
+
+# Use ICMP instead of TCP (requires elevated privileges)
+use_icmp: false
+
+# Tailmonke TUI configuration
+tailmonke:
+  # Number of log lines to display in the TUI
+  lines_to_display: 20

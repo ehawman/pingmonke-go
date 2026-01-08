@@ -22,6 +22,11 @@ func main() {
 	cfg.Verbose = *verbose
 	cfg.DebugMode = *debug
 
+	// Auto-enable verbose mode when in debug mode
+	if cfg.DebugMode {
+		cfg.Verbose = true
+	}
+
 	internal.SetDefaults(&cfg)
 	internal.PrepareLogDirectory(cfg.LogDir)
 

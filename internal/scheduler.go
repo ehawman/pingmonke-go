@@ -8,8 +8,9 @@ import (
 
 func StartScheduler(cfg Config) {
 	// Set interval based on debug mode
+	interval := cfg.Interval
 	if cfg.DebugMode {
-		cfg.Interval = 5 * time.Second
+		interval = cfg.DebugInterval
 	}
 
 	for {
@@ -21,7 +22,7 @@ func StartScheduler(cfg Config) {
 		var wg sync.WaitGroup
 
 		for time.Now().Before(periodEnd) {
-			nextPingTime := alignToSchedule(periodStart, cfg.Interval)
+			nextPingTime := alignToSchedule(periodStart, interval)
 			spawnTime := maxTime(time.Now(), nextPingTime)
 
 			sleepUntil(spawnTime)
@@ -31,7 +32,7 @@ func StartScheduler(cfg Config) {
 
 		// Wait for all pings in this period to complete
 		wg.Wait()
-		generateSummary(logFile)
+		generateSummary(logFile, cfg)
 
 		// Sleep until next period to avoid busy loop at rollover
 		sleepUntil(periodEnd.Add(100 * time.Millisecond))
@@ -41,12 +42,8 @@ func StartScheduler(cfg Config) {
 func calculatePeriod(cfg Config) (time.Time, time.Time) {
 	now := time.Now()
 	if cfg.DebugMode {
-		if now.Second() < 30 {
-			start := now.Truncate(time.Minute)
-			return start, start.Add(30 * time.Second)
-		}
-		start := now.Truncate(time.Minute).Add(30 * time.Second)
-		return start, start.Add(30 * time.Second)
+		start := now.Truncate(time.Minute)
+		return start, start.Add(60 * time.Second)
 	}
 	start := time.Now().Truncate(24 * time.Hour)
 	return start, start.Add(24 * time.Hour)

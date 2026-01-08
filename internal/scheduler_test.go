@@ -10,21 +10,18 @@ func TestCalculatePeriodDebugMode(t *testing.T) {
 	cfg := Config{DebugMode: true}
 	periodStart, periodEnd := calculatePeriod(cfg)
 
-	// In debug mode, periods should always be 30 seconds
+	// In debug mode, periods should be 60 seconds starting at top of minute
 	duration := periodEnd.Sub(periodStart)
-	expectedDuration := 30 * time.Second
+	expectedDuration := 60 * time.Second
 
 	if duration != expectedDuration {
 		t.Errorf("Expected period duration %v, got %v", expectedDuration, duration)
 	}
 
-	// Verify boundary behavior: at exactly 30 seconds, should get next period
-	// Create a time at exactly :30 of a minute
-	testTime := time.Now().Truncate(time.Minute).Add(30 * time.Second)
-	// At this boundary, we should be in the second half
-	if testTime.Second() == 30 {
-		// This simulates being at the boundary - next call should return next period
-		// (Can't directly test without mocking time.Now, but logic is sound)
+	// Start should be at the top of the minute
+	expectedStart := time.Now().Truncate(time.Minute)
+	if !periodStart.Equal(expectedStart) {
+		t.Errorf("Expected period start at top of minute, got %v", periodStart)
 	}
 }
 

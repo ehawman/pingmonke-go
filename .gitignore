@@ -14,8 +14,8 @@ __debug_bin*
 logs/
 ping-logs/
 
-# Config files
-config.yaml
+# # Config files
+# config.yaml
 
 # IDE/Editor settings
 .vscode/
